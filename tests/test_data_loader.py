@@ -4,7 +4,7 @@ import tempfile
 
 # Note: The following line will fail right now because we haven't created the file and function yet
 # We'll implement this in the next step in src/data_loader.py
-# from data_loader import load_xml_data
+# from utils.data_loader import load_xml_data
 
 class TestXmlDataLoader(unittest.TestCase):
     def setUp(self):
@@ -45,7 +45,7 @@ class TestXmlDataLoader(unittest.TestCase):
         """
         # Local import so that the test does not crash immediately when run before execution, but only inside the function
         try:
-            from src.data_loader import load_xml_data
+            from utils.data_loader import load_xml_data
         except ImportError:
             self.fail("Could not import 'load_xml_data'. Did you implement it yet?")
 
@@ -71,7 +71,7 @@ class TestXmlDataLoader(unittest.TestCase):
         Test that the function raises FileNotFoundError for non-existent files.
         """
         try:
-            from src.data_loader import load_xml_data
+            from utils.data_loader import load_xml_data
         except ImportError:
             self.fail("Could not import 'load_xml_data'.")
 
