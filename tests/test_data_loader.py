@@ -4,7 +4,7 @@ import tempfile
 
 # Note: The following line will fail right now because we haven't created the file and function yet
 # We'll implement this in the next step in src/data_loader.py
-# from src.data_loader import load_xml_data
+# from data_loader import load_xml_data
 
 class TestXmlDataLoader(unittest.TestCase):
     def setUp(self):
