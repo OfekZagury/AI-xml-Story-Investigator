@@ -19,7 +19,7 @@ class NaiveRAG:
         # In-memory vector store: List of dictionaries {'text': str, 'vector': np.array}
         self.vector_store: List[Dict] = []
 
-    def chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 100) -> List[str]:
+    def chunk_text(self, text: str, chunk_size: int = 500, overlap: int = 100) -> List[str]:
         """
         Splits a large text into smaller overlapping chunks.
 
@@ -121,13 +121,10 @@ class NaiveRAG:
         prompt = f"""
         You are a helpful assistant. Use the following context to answer the user's question.
         If the answer is not in the context, say you don't know.
-
         Context:
         {context_text}
-
         User Question: 
         {question}
-
         Answer:
         """
 
