@@ -3,6 +3,7 @@ import sys
 from dotenv import load_dotenv
 from pathlib import Path
 
+from rag_implementations.msft_graphrag import MsftGraphRAG
 from utils.data_loader import load_xml_data
 from rag_implementations.naive_rag import NaiveRAG
 
@@ -77,7 +78,44 @@ def main():
 
         print(f"Ingested {len(chapters)} chapters (automatically chunked).")
     elif choice == '2':
-        print("\nnot implemented: Microsoft GraphRAG")
+        print("\nInitializing Microsoft GraphRAG...")
+        rag_engine = MsftGraphRAG()
+
+        print("Preparing input files...")
+
+        from collections import defaultdict
+        # A: prepare & add documents
+        chapters_buffer = defaultdict(list)
+        for msg in messages:
+            chapters_buffer[msg['chapter']].append(msg)
+
+        for chapter_id, chapter_msgs in chapters_buffer.items():
+            chapter_title = chapter_msgs[0]['chapter_title']
+
+            # Build full chapter text
+            chapter_full_text = f"Chapter: {chapter_title}\n"
+            for msg in chapter_msgs:
+                chapter_full_text += (
+                    f"[{msg['timestamp']}] {msg['sender_name']}: {msg['body']}\n"
+                )
+
+            # saving to file, filename must be unique
+            filename = f"chapter_{chapter_id}_{chapter_title}.txt"
+            rag_engine.add_document(chapter_full_text, filename=filename)
+
+        # B: indexing
+        print("\nIMPORTANT: Microsoft GraphRAG requires an indexing step.")
+        should_index = input("Run indexing now? (y/n) [Required if this is the first run]: ").lower()
+        if should_index == 'y':
+            rag_engine.run_indexing()
+        else:
+            print("Skipping indexing. (Only do this if you already indexed this EXACT data before).")
+
+        # C: choose search method
+        search_method = input(
+            "Search Method - 'global' (Summary) or 'local' (Specific details)? [default: global]: ").strip()
+        if not search_method:
+            search_method = "global"
 
 
     elif choice == '3':
