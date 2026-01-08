@@ -6,6 +6,7 @@ from pathlib import Path
 from rag_implementations.msft_graphrag import MsftGraphRAG
 from utils.data_loader import load_xml_data
 from rag_implementations.naive_rag import NaiveRAG
+from rag_implementations.neo4j_graphrag import Neo4jGraphRAG
 
 load_dotenv()
 current_dir = Path(__file__).parent
@@ -118,9 +119,61 @@ def main():
             search_method = "global"
 
 
-    elif choice == '3':
-        print("\nnot implemented: Neo4j GraphRAG...")
 
+    elif choice == '3':
+        print("\nInitializing Neo4j GraphRAG...")
+        # 1. Check environment variables
+        neo4j_uri = os.getenv("NEO4J_URI")
+        neo4j_user = os.getenv("NEO4J_USERNAME")
+        neo4j_password = os.getenv("NEO4J_PASSWORD")
+
+        if not all([neo4j_uri, neo4j_user, neo4j_password]):
+            print("Error: Missing Neo4j credentials in .env file.")
+            sys.exit(1)
+        # Initialize the engine
+        try:
+            rag_engine = Neo4jGraphRAG(neo4j_uri, neo4j_user, neo4j_password)
+
+        except Exception as e:
+            print(f"Failed to connect to Neo4j: {e}")
+            sys.exit(1)
+
+        # 2. Decide whether to ingest data (Ingestion Strategy)
+        # to extract entities and relationships. We only want to do this once.
+        print("\nNeo4j Status: Connected.")
+
+        should_ingest = input("Do you want to ingest/re-index the data? (y/n) [Choose 'n' if data is already in DB]: ").lower()
+
+        if should_ingest == 'y':
+            print("Preparing data for Knowledge Graph ingestion...")
+            # --- Grouping Logic (Context Preservation) ---
+            #  group messages by chapter so the LLM can extract entities
+            # from a complete context rather than isolated messages.
+            from collections import defaultdict
+            chapters_buffer = defaultdict(list)
+
+            for msg in messages:
+                chapters_buffer[msg['chapter']].append(msg)
+
+            total_chapters = len(chapters_buffer)
+            print(f"Found {total_chapters} chapters. Starting graph extraction process...")
+
+            for i, (chapter_id, chapter_msgs) in enumerate(chapters_buffer.items(), 1):
+                chapter_title = chapter_msgs[0]['chapter_title']
+                # Construct the full chapter text
+                chapter_full_text = f"Chapter: {chapter_title}\n"
+                for msg in chapter_msgs:
+                    chapter_full_text += (
+                        f"[{msg['timestamp']}] {msg['sender_name']}: {msg['body']}\n"
+                    )
+
+                print(f"--> Processing Chapter {i}/{total_chapters}: '{chapter_title}'")
+                rag_engine.add_document(chapter_full_text)
+
+            print("\nIngestion Complete! The Knowledge Graph is ready.")
+
+        else:
+            print("Skipping ingestion. Using existing data in Neo4j.")
 
     else:
         print("Invalid choice. Exiting.")

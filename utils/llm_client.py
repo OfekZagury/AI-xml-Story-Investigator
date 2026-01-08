@@ -21,7 +21,7 @@ class LLMClient:
         self.client = OpenAI(api_key=api_key)
         self.max_input_chars = 3000
 
-    def get_completion(self, prompt: str, model: str = "gpt-4o-mini") -> str:
+    def get_completion(self, prompt: str, model: str = "gpt-5") -> str:
         """
         Sends a prompt to the OpenAI API and retrieves the generated response.
 
