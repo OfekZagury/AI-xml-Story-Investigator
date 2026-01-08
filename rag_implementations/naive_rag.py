@@ -60,7 +60,7 @@ class NaiveRAG:
         """
         Processes a document: chunks it, embeds each chunk, and stores it in memory.
         """
-        print("Chunking and embedding document...")
+        print("Chunking and embedding chapter...")
         chunks = self.chunk_text(text)
 
         for chunk in chunks:
@@ -107,6 +107,13 @@ class NaiveRAG:
         relevant_chunks = self.find_relevant_chunks(question)
         if not relevant_chunks:
             return "I couldn't find any relevant information in the documents."
+
+        # --- DEBUG PRINT START ---
+        print("\n--- DEBUG: Retrieved Chunks ---")
+        for i, chunk in enumerate(relevant_chunks):
+            print(f"[{i + 1}] {chunk[:100]}...")  # beginning of chunk
+        print("--- DEBUG END ---\n")
+        # --- DEBUG PRINT END ---
 
         # 2. Augment (Construct Prompt)
         context_text = "\n\n---\n\n".join(relevant_chunks)

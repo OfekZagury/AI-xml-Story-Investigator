@@ -53,11 +53,29 @@ def main():
         print("\nInitializing Naive RAG...")
         rag_engine = NaiveRAG()
         print("Ingesting data into memory...")
-        for mes in messages:
-            # Combining title and content for better context
-            full_text = f"Title: {mes.get('title', '')}\nContent: {mes.get('content', '')}"
-            rag_engine.add_message(full_text)
+        from collections import defaultdict
+        chapters = defaultdict(list)
 
+        # 1. Group messages
+        for mes in messages:
+            chapters[mes['chapter']].append(mes)
+
+        # 2. Feed whole chapters to the RAG
+        for chapter_id, msgs in chapters.items():
+            # Combine all messages in the chapter into one long string
+            chapter_text = ""
+            for msg in msgs:
+                chapter_text += (
+                    f"[{msg['timestamp']}] {msg['sender_name']}: {msg['body']}\n"
+                )
+
+            # Now we send a LARGE text (e.g., 5000 chars).
+            # The NaiveRAG.chunk_text function will split this into
+            # 5 overlapping chunks of 1000 chars each.
+            # This preserves context!
+            rag_engine.add_message(chapter_text)  # (You might want to rename this method to add_document)
+
+        print(f"Ingested {len(chapters)} chapters (automatically chunked).")
     elif choice == '2':
         print("\nnot implemented: Microsoft GraphRAG")
 
