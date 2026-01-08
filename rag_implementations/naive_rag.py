@@ -56,7 +56,7 @@ class NaiveRAG:
             print(f"Error generating embedding: {e}")
             return np.array([])
 
-    def add_document(self, text: str):
+    def add_message(self, text: str):
         """
         Processes a document: chunks it, embeds each chunk, and stores it in memory.
         """

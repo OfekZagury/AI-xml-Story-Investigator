@@ -5,47 +5,75 @@ from typing import List, Dict, Any
 
 def load_xml_data(file_path: str) -> List[Dict[str, Any]]:
     """
-    Parses an XML file and returns a list of dictionaries.
-    Each dictionary represents a document within the XML.
-
-    Args:
-        file_path (str): Path to the XML file.
-
-    Returns:
-        List[Dict]: A list of documents with their fields.
-
-    Raises:
-        FileNotFoundError: If the file does not exist.
-        ET.ParseError: If the XML is malformed.
+    Load and parse XML story data containing messages organized in chapters.
+    Handles XML namespaces and attribute-based metadata.
     """
-    # A check to ensure the file exists before attempting to parse it
-    # Fits the requirement from the test test_load_xml_file_not_found
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"The file {file_path} was not found.")
+        raise FileNotFoundError(f"XML file not found at: {file_path}")
 
-    try:
-        tree = ET.parse(file_path)
-        root = tree.getroot()
+    tree = ET.parse(file_path)
+    root = tree.getroot()
 
-        results = []
+    # 1. Define the Namespace
+    # The XML has xmlns="urn:whodunit:sms:1", so we must map it.
+    ns = {'ns': 'urn:whodunit:sms:1'}
 
-        # Assuming each document is represented by a <document> tag
-        # Fits the test test_load_xml_valid_parsing
-        for doc in root.findall('document'):
-            doc_data = {}
+    messages = []
+    characters = {}
 
-            # extracting the 'id' attribute if it exists
-            if 'id' in doc.attrib:
-                doc_data['id'] = doc.attrib['id']
+    # 2. Parse Participants (Corrected tag name and attribute access)
+    # XML uses <person>, not <character>
+    # XML uses attributes (name="..."), not child tags (<name>...</name>)
+    for person in root.findall('.//ns:person', ns):
+        char_id = person.get('id')
+        characters[char_id] = {
+            'name': person.get('name'),
+            'role': person.get('role')
+        }
 
-            # extracting child elements like title, content, author, etc.
-            for child in doc:
-                doc_data[child.tag] = child.text.strip() if child.text else ""
+    # Also add groups to characters dict so we don't get 'Unknown' for group messages
+    for group in root.findall('.//ns:group', ns):
+        group_id = group.get('id')
+        characters[group_id] = {
+            'name': group.get('name'),
+            'role': 'Group Chat'
+        }
 
-            results.append(doc_data)
+    # 3. Parse messages from all chapters
+    for chapter in root.findall('.//ns:chapter', ns):
+        chapter_id = chapter.get('id')
+        chapter_title = chapter.get('title')
 
-        return results
+        for message in chapter.findall('ns:message', ns):
+            # Helper to safely get sender/receiver refs
+            sender_elem = message.find('ns:sender', ns)
+            receiver_elem = message.find('ns:receiver', ns)
+            body_elem = message.find('ns:body', ns)
 
-    except ET.ParseError as e:
-        # throws an error if the XML is malformed
-        raise ValueError(f"Error parsing XML file: {e}")
+            sender_ref = sender_elem.get('ref') if sender_elem is not None else "unknown"
+            receiver_ref = receiver_elem.get('ref') if receiver_elem is not None else "unknown"
+
+            msg_data = {
+                'id': message.get('id'),
+                'timestamp': message.get('ts'),
+                'chapter': chapter_id,
+                'chapter_title': chapter_title,
+                'sender': sender_ref,
+                'receiver': receiver_ref,
+                'body': body_elem.text if body_elem is not None else "",
+                'sender_name': characters.get(sender_ref, {}).get('name', 'Unknown')
+            }
+
+            # Handle optional attachments
+            attachment = message.find('ns:attachment', ns)
+            if attachment is not None:
+                msg_data['attachment'] = {
+                    'type': attachment.get('type'),
+                    'file': attachment.get('file'),
+                    'exif': attachment.get('exif')
+                }
+
+            messages.append(msg_data)
+
+    return messages
+
