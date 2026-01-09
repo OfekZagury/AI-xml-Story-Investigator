@@ -94,6 +94,10 @@ class MsftGraphRAG:
         """
         Queries the RAG system.
         """
+        # Limit prompt length
+        if len(question) > 3000:
+            raise ValueError(f"Query exceeds 3000 character limit (current: {len(question)} characters)")
+
         print(f"Querying GraphRAG ({method} search)...")
 
         try:

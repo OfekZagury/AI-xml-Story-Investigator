@@ -190,6 +190,10 @@ class Neo4jGraphRAG:
         YOUR ANSWER:
         """
 
+        # Limit prompt length
+        if len(prompt) > 3000:
+            raise ValueError(f"Query exceeds 3000 character limit (current: {len(prompt)} characters)")
+
         return self.llm_client.get_completion(prompt)
 
     def close(self):

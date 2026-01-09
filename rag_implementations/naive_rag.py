@@ -108,13 +108,6 @@ class NaiveRAG:
         if not relevant_chunks:
             return "I couldn't find any relevant information in the documents."
 
-        # --- DEBUG PRINT START ---
-        print("\n--- DEBUG: Retrieved Chunks ---")
-        for i, chunk in enumerate(relevant_chunks):
-            print(f"[{i + 1}] {chunk[:100]}...")  # beginning of chunk
-        print("--- DEBUG END ---\n")
-        # --- DEBUG PRINT END ---
-
         # 2. Augment (Construct Prompt)
         context_text = "\n\n---\n\n".join(relevant_chunks)
 
@@ -127,6 +120,10 @@ class NaiveRAG:
         {question}
         Answer:
         """
+
+        # Limit prompt length
+        if len(prompt) > 3000:
+            raise ValueError(f"Query exceeds 3000 character limit (current: {len(prompt)} characters)")
 
         # 3. Generate
         return self.llm_client.get_completion(prompt)
