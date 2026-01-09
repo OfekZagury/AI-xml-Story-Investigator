@@ -4,7 +4,6 @@ import subprocess
 import re
 from typing import List
 
-
 class MsftGraphRAG:
     """
     A wrapper around the Microsoft GraphRAG CLI.
@@ -123,7 +122,7 @@ class MsftGraphRAG:
             if match:
                 return match.group(1).strip()
 
-            return f"(Raw Output) {output[-2000:]}"
+            return f"(Raw Output:) {output}"
 
         except Exception as e:
             return f"Query execution failed: {e}"

@@ -113,7 +113,7 @@ class NaiveRAG:
 
         prompt = f"""
         You are a helpful assistant. Use the following context to answer the user's question.
-        If the answer is not in the context, say you don't know.
+        Provide the answer to the question and cite the context used.
         Context:
         {context_text}
         User Question: 

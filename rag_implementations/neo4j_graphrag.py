@@ -180,7 +180,7 @@ class Neo4jGraphRAG:
         USER QUESTION: {question}
 
         INSTRUCTIONS:
-        Answer the question above based ONLY on the provided context below.
+        Answer the question above based ONLY on the provided context below and cite the context that supports your answer.
 
         CONTEXT FROM DATABASE:
         <context>
