@@ -30,7 +30,7 @@ class LLMClient:
 
         Args:
             prompt (str): The input text to send to the model.
-            model (str): The model identifier (default: "gpt-4o-mini").
+            model (str): The model identifier (default: "gpt-5").
 
         Returns:
             str: The content of the model's response, or an empty string if an error occurs.

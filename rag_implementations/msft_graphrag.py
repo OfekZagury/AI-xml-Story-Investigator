@@ -45,25 +45,25 @@ class MsftGraphRAG:
 
     def _configure_settings(self, settings_path: str):
         """
-        Updates settings.yaml to use gpt-4o-mini.
+        Updates settings.yaml to use gpt-5.
         Now includes a check to prevent double-replacement corruption.
         """
         with open(settings_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        if 'model: gpt-4o-mini' in content:
-            print("[MsftGraphRAG] Settings already configured for gpt-4o-mini. Skipping.")
+        if 'model: gpt-5' in content:
+            print("[MsftGraphRAG] Settings already configured for gpt-5. Skipping.")
             return
 
-        print("[MsftGraphRAG] Updating settings.yaml to use gpt-4o-mini...")
+        print("[MsftGraphRAG] Updating settings.yaml to use gpt-5...")
 
         # Replace the default API key placeholder
         if 'api_key: ${GRAPHRAG_API_KEY}' in content:
             content = content.replace('api_key: ${GRAPHRAG_API_KEY}', 'api_key: ${OPENAI_API_KEY}')
 
-        # FORCE override models to gpt-4o-mini
-        content = content.replace('model: gpt-4-turbo-preview', 'model: gpt-4o-mini')
-        content = content.replace('model: gpt-4', 'model: gpt-4o-mini')
+        # FORCE override models to gpt-5
+        content = content.replace('model: gpt-4-turbo-preview', 'model: gpt-5')
+        content = content.replace('model: gpt-4', 'model: gpt-5')
 
         with open(settings_path, 'w', encoding='utf-8') as f:
             f.write(content)
