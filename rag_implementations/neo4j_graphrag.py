@@ -124,7 +124,7 @@ class Neo4jGraphRAG:
         Retrieves relevant context using Vector Search and generates an answer.
         """
         # 1. Retrieve using VectorRetriever
-        # This finds the top 3 most relevant Document nodes
+        # We search for the top 3 most relevant chapters/documents based on vector similarity
         retriever = VectorRetriever(
             driver=self.driver,
             index_name="document_embeddings",
@@ -135,25 +135,30 @@ class Neo4jGraphRAG:
         print(f"[Neo4j] Retrieving context for: {question}")
         results = retriever.search(query_text=question, top_k=3)
 
-        # Extract the text from the results
+        # Extract and concatenate the text from the results
         context_text = ""
         for result in results.items:
-            # result.content contains the text we stored
             context_text += f"---\n{result.content}\n"
 
         if not context_text:
             return "No relevant information found in the graph."
 
-        # 2. Generate Answer
+        # 2. Generate Answer - RESTRUCTURED PROMPT
+        # the instruction after reading long context blocks.
         prompt = f"""
-        Use the following context (retrieved from a Graph Database) to answer the question.
+        USER QUESTION: {question}
 
-        Context:
+        INSTRUCTIONS:
+        Answer the question above based ONLY on the provided context below.
+
+        CONTEXT FROM DATABASE:
+        <context>
         {context_text}
+        </context>
 
-        Question: {question}
-        Answer:
+        YOUR ANSWER:
         """
+
         return self.llm_client.get_completion(prompt)
 
     def close(self):
