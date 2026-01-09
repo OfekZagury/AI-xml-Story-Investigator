@@ -164,7 +164,7 @@ class Neo4jGraphRAG:
         )
 
         print(f"[Neo4j] Retrieving context for: {question}")
-        results = retriever.search(query_text=question, top_k=1)
+        results = retriever.search(query_text=question, top_k=3)
 
         # Extract and concatenate the text from the results
         context_text = ""
