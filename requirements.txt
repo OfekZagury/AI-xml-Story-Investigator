@@ -1,9 +1,6 @@
-unittest
-os
-tempfile
-typing
 openai
-xml
-typing
 numpy
-
+python-dotenv
+neo4j
+neo4j-graphrag
+graphrag

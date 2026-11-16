@@ -60,9 +60,9 @@ class MsftGraphRAG:
         if 'api_key: ${GRAPHRAG_API_KEY}' in content:
             content = content.replace('api_key: ${GRAPHRAG_API_KEY}', 'api_key: ${OPENAI_API_KEY}')
 
-        # FORCE override models to gpt-5
-        content = content.replace('model: gpt-4-turbo-preview', 'model: gpt-5')
-        content = content.replace('model: gpt-4', 'model: gpt-5')
+        # FORCE override chat models to gpt-5 (covers gpt-4, gpt-4o, gpt-4.1, gpt-4-turbo-preview ...)
+        # A plain string replace would turn 'gpt-4o' into the invalid 'gpt-5o'.
+        content = re.sub(r'(model:\s*)gpt-4[\w.\-]*', r'\g<1>gpt-5', content)
 
         with open(settings_path, 'w', encoding='utf-8') as f:
             f.write(content)
