@@ -2,7 +2,7 @@
 
 Solve a murder mystery by asking questions about it. The story is a chain of SMS messages between suspects, stored as namespaced XML and split into chapters. The project implements **three Retrieval-Augmented Generation strategies side by side** over the same data, so you can compare how each one handles investigative questions such as *"Who had a motive?"* or *"Which messages contradict each other?"*
 
-There is also a **web UI** (`streamlit_app.py`) that asks the same question to Naive RAG and to Microsoft GraphRAG's global and local search side by side, powered by Google Gemini.
+**[▶ Live demo](https://ai-xml-story-investigator.streamlit.app/)**: a **web UI** (`streamlit_app.py`) that asks the same question to Naive RAG and to Microsoft GraphRAG's global and local search side by side, powered by Google Gemini.
 
 **What the comparison shows:** asked *"Who is responsible for what happened to Liam, and what is the evidence?"*, Naive RAG followed the three most similar chunks to a red herring, while both GraphRAG searches named the right person and walked through the chain of evidence, because their answers draw on relationships across the whole story rather than on isolated chunks.
 
