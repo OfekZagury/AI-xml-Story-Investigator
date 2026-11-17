@@ -61,7 +61,8 @@ def load_xml_data(file_path: str) -> List[Dict[str, Any]]:
                 'sender': sender_ref,
                 'receiver': receiver_ref,
                 'body': body_elem.text if body_elem is not None else "",
-                'sender_name': characters.get(sender_ref, {}).get('name', 'Unknown')
+                'sender_name': characters.get(sender_ref, {}).get('name', 'Unknown'),
+                'receiver_name': characters.get(receiver_ref, {}).get('name', 'Unknown')
             }
 
             # Handle optional attachments
@@ -72,6 +73,9 @@ def load_xml_data(file_path: str) -> List[Dict[str, Any]]:
                     'file': attachment.get('file'),
                     'exif': attachment.get('exif')
                 }
+                # Audio attachments carry their metadata in `meta` instead of `exif`
+                if attachment.get('meta'):
+                    msg_data['attachment']['meta'] = attachment.get('meta')
 
             messages.append(msg_data)
 

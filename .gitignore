@@ -13,3 +13,9 @@ rag_workspace/
 # IDE
 .idea/
 .vscode/
+
+# Committed GraphRAG index (graphrag_index/): keep settings, prompts and output only
+graphrag_index/cache/
+graphrag_index/logs/
+graphrag_index/input/
+graphrag_index/.env

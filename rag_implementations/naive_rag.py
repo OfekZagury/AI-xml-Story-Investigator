@@ -39,37 +39,36 @@ class NaiveRAG:
             start += chunk_size - overlap
         return chunks
 
+    @staticmethod
+    def _normalize(vector) -> np.ndarray:
+        vector = np.array(vector, dtype=np.float32)
+        norm = np.linalg.norm(vector)
+        return vector / norm if norm else vector
+
     def get_embedding(self, text: str) -> np.ndarray:
         """
-        Generates a vector embedding for a given text using OpenAI's embedding model.
+        Generates a unit-length vector embedding for a given text.
         """
-        text = text.replace("\n", " ")  # Normalize newlines
         try:
-            # Accessing the internal openai client from LLMClient
-            response = self.llm_client.client.embeddings.create(
-                input=[text],
-                model="text-embedding-3-small"
-            )
-            vector = response.data[0].embedding
-            return np.array(vector, dtype=np.float32)
+            return self._normalize(self.llm_client.get_embeddings([text])[0])
         except Exception as e:
             print(f"Error generating embedding: {e}")
             return np.array([])
 
     def add_message(self, text: str):
         """
-        Processes a document: chunks it, embeds each chunk, and stores it in memory.
+        Processes a document: chunks it, embeds the chunks (batched), and stores them in memory.
         """
         print("Chunking and embedding chapter...")
         chunks = self.chunk_text(text)
+        try:
+            vectors = self.llm_client.get_embeddings(chunks)
+        except Exception as e:
+            print(f"Error generating embeddings: {e}")
+            return
 
-        for chunk in chunks:
-            vector = self.get_embedding(chunk)
-            if vector.size > 0:
-                self.vector_store.append({
-                    "text": chunk,
-                    "vector": vector
-                })
+        for chunk, vector in zip(chunks, vectors):
+            self.vector_store.append({"text": chunk, "vector": self._normalize(vector)})
         print(f"Stored {len(chunks)} chunks in vector store.")
 
     def find_relevant_chunks(self, query: str, top_k: int = 3) -> List[str]:
@@ -80,12 +79,10 @@ class NaiveRAG:
         if query_vector.size == 0:
             return []
 
-        scored_chunks = []
-
+        scored_chunks: List[Tuple[float, str]] = []
         for item in self.vector_store:
-            # Calculate Cosine Similarity
-            # Note: OpenAI embeddings are normalized, so dot product equals cosine similarity
-            score = np.dot(query_vector, item['vector'])
+            # Vectors are normalized, so the dot product equals cosine similarity
+            score = float(np.dot(query_vector, item['vector']))
             scored_chunks.append((score, item['text']))
 
         # Sort by score descending (highest similarity first)
@@ -94,9 +91,9 @@ class NaiveRAG:
         # Return the top K text chunks
         return [chunk for score, chunk in scored_chunks[:top_k]]
 
-    def answer_question(self, question: str) -> str:
+    def answer_with_context(self, question: str) -> Tuple[str, List[str]]:
         """
-        Full RAG pipeline:
+        Full RAG pipeline, returning the answer and the retrieved chunks:
         1. Retrieve relevant chunks based on the question.
         2. Construct a prompt with context.
         3. Get answer from LLM.
@@ -106,7 +103,7 @@ class NaiveRAG:
         # 1. Retrieve
         relevant_chunks = self.find_relevant_chunks(question)
         if not relevant_chunks:
-            return "I couldn't find any relevant information in the documents."
+            return "I couldn't find any relevant information in the documents.", []
 
         # 2. Augment (Construct Prompt)
         context_text = "\n\n---\n\n".join(relevant_chunks)
@@ -116,7 +113,7 @@ class NaiveRAG:
         Provide the answer to the question and cite the context used.
         Context:
         {context_text}
-        User Question: 
+        User Question:
         {question}
         Answer:
         """
@@ -126,7 +123,12 @@ class NaiveRAG:
             raise ValueError(f"Query exceeds 3000 character limit (current: {len(prompt)} characters)")
 
         # 3. Generate
-        return self.llm_client.get_completion(prompt)
+        return self.llm_client.get_completion(prompt), relevant_chunks
+
+    def answer_question(self, question: str) -> str:
+        """Answers a question using the RAG pipeline (see answer_with_context)."""
+        answer, _ = self.answer_with_context(question)
+        return answer
 
 
 # --- Example Usage (if run directly) ---

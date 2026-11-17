@@ -2,13 +2,10 @@ import os
 import sys
 from dotenv import load_dotenv
 from pathlib import Path
-from collections import defaultdict
 from typing import List, Dict, Any, Optional, Tuple
 
-from rag_implementations.msft_graphrag import MsftGraphRAG
 from utils.data_loader import load_xml_data
-from rag_implementations.naive_rag import NaiveRAG
-from rag_implementations.neo4j_graphrag import Neo4jGraphRAG
+from utils.story_text import build_chapter_text, group_messages_by_chapter
 
 load_dotenv()
 current_dir = Path(__file__).parent
@@ -19,10 +16,10 @@ def print_separator():
 
 
 def validate_environment():
-    """Validate required environment variables."""
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Error: OPENAI_API_KEY not found in environment variables.")
-        print("Please create a .env file or export the key.")
+    """Validate required environment variables (a Gemini or an OpenAI key)."""
+    if not os.getenv("GEMINI_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+        print("Error: neither GEMINI_API_KEY nor OPENAI_API_KEY found in environment variables.")
+        print("Please create a .env file or export a key.")
         sys.exit(1)
 
 
@@ -44,28 +41,10 @@ def get_user_strategy_choice() -> str:
     return input("Enter number (1-3): ").strip()
 
 
-def group_messages_by_chapter(messages: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-    """Group messages by chapter for context preservation."""
-    chapters = defaultdict(list)
-    for msg in messages:
-        chapters[msg['chapter']].append(msg)
-    return chapters
-
-
-def build_chapter_text(chapter_msgs: List[Dict[str, Any]], include_title: bool = True) -> str:
-    """Build full chapter text from messages."""
-    chapter_text = ""
-    if include_title:
-        chapter_title = chapter_msgs[0]['chapter_title']
-        chapter_text = f"Chapter: {chapter_title}\n"
-
-    for msg in chapter_msgs:
-        chapter_text += f"[{msg['timestamp']}] {msg['sender_name']}: {msg['body']}\n"
-    return chapter_text
-
-
-def initialize_naive_rag(messages: List[Dict[str, Any]]) -> NaiveRAG:
+def initialize_naive_rag(messages: List[Dict[str, Any]]) -> Any:
     """Initialize Naive RAG with message data."""
+    from rag_implementations.naive_rag import NaiveRAG
+
     print("\nInitializing Naive RAG...")
     rag_engine = NaiveRAG()
     print("Ingesting data into memory...")
@@ -80,8 +59,10 @@ def initialize_naive_rag(messages: List[Dict[str, Any]]) -> NaiveRAG:
     return rag_engine
 
 
-def initialize_msft_graphrag(messages: List[Dict[str, Any]]) -> Tuple[MsftGraphRAG, str]:
+def initialize_msft_graphrag(messages: List[Dict[str, Any]]) -> Tuple[Any, str]:
     """Initialize Microsoft GraphRAG with message data."""
+    from rag_implementations.msft_graphrag import MsftGraphRAG
+
     print("\nInitializing Microsoft GraphRAG...")
     rag_engine = MsftGraphRAG()
     print("Preparing input files...")
@@ -112,8 +93,10 @@ def initialize_msft_graphrag(messages: List[Dict[str, Any]]) -> Tuple[MsftGraphR
     return rag_engine, search_method
 
 
-def initialize_neo4j_graphrag(messages: List[Dict[str, Any]]) -> Neo4jGraphRAG:
+def initialize_neo4j_graphrag(messages: List[Dict[str, Any]]) -> Any:
     """Initialize Neo4j GraphRAG with message data."""
+    from rag_implementations.neo4j_graphrag import Neo4jGraphRAG
+
     print("\nInitializing Neo4j GraphRAG...")
 
     # Check credentials
@@ -147,7 +130,7 @@ def initialize_neo4j_graphrag(messages: List[Dict[str, Any]]) -> Neo4jGraphRAG:
     return rag_engine
 
 
-def ingest_data_to_neo4j(rag_engine: Neo4jGraphRAG, messages: List[Dict[str, Any]]):
+def ingest_data_to_neo4j(rag_engine: Any, messages: List[Dict[str, Any]]):
     """Ingest message data into Neo4j knowledge graph."""
     print("Preparing data for Knowledge Graph ingestion...")
 

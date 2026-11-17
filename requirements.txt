@@ -1,6 +1,10 @@
+graphrag==2.7.0
+# graphrag's graspologic dependency needs NumPy 1.x, which rules out the newest pandas / pyarrow
+numpy<2
+pandas<3
+pyarrow<22
 openai
-numpy
 python-dotenv
+streamlit
 neo4j
 neo4j-graphrag
-graphrag

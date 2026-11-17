@@ -1,15 +1,22 @@
+import asyncio
 import os
 import sys
 import subprocess
 import re
-from typing import List
+import threading
+from pathlib import Path
+from typing import Any, Tuple
+
+# The committed, ready-to-query index (built with Gemini, see build_graphrag_index.py)
+DEFAULT_ROOT = str(Path(__file__).resolve().parent.parent / "graphrag_index")
+
 
 class MsftGraphRAG:
     """
     A wrapper around the Microsoft GraphRAG CLI.
     """
 
-    def __init__(self, root_dir: str = "./rag_workspace"):
+    def __init__(self, root_dir: str = DEFAULT_ROOT):
         """
         Initialize the workspace for MS GraphRAG.
         """
@@ -49,6 +56,10 @@ class MsftGraphRAG:
         """
         with open(settings_path, 'r', encoding='utf-8') as f:
             content = f.read()
+
+        if 'model_provider: gemini' in content:
+            print("[MsftGraphRAG] Using the Gemini settings in settings.yaml.")
+            return
 
         if 'model: gpt-5' in content:
             print("[MsftGraphRAG] Settings already configured for gpt-5. Skipping.")
@@ -126,3 +137,87 @@ class MsftGraphRAG:
 
         except Exception as e:
             return f"Query execution failed: {e}"
+
+class GraphRAGIndex:
+    """
+    Queries an already-built GraphRAG index in-process with the graphrag Python API.
+
+    Used by the web demo: no CLI subprocess, and the index tables are loaded once.
+    """
+
+    COMMUNITY_LEVEL = 2
+    RESPONSE_TYPE = "A few short paragraphs"
+
+    def __init__(self, root_dir: str = DEFAULT_ROOT):
+        import pandas as pd
+        from graphrag.config.load_config import load_config
+
+        self.root = Path(root_dir)
+        self.config = load_config(self.root)
+        output = self.root / "output"
+        self.entities = pd.read_parquet(output / "entities.parquet")
+        self.communities = pd.read_parquet(output / "communities.parquet")
+        self.community_reports = pd.read_parquet(output / "community_reports.parquet")
+        self.text_units = pd.read_parquet(output / "text_units.parquet")
+        self.relationships = pd.read_parquet(output / "relationships.parquet")
+
+        # GraphRAG caches its model clients, and they stay bound to the event loop that first
+        # used them. Running every search on one long-lived loop keeps concurrent searches
+        # (e.g. from several web requests) from waiting forever on another loop's objects.
+        self._loop = asyncio.new_event_loop()
+        threading.Thread(target=self._loop.run_forever, name="graphrag-loop", daemon=True).start()
+
+    def search(self, question: str, method: str = "global") -> Tuple[str, str]:
+        """Answers a question with global or local search; returns (answer, context summary)."""
+        import graphrag.api as api
+
+        if len(question) > 3000:
+            raise ValueError(f"Query exceeds 3000 character limit (current: {len(question)} characters)")
+
+        if method == "global":
+            coroutine = api.global_search(
+                config=self.config,
+                entities=self.entities,
+                communities=self.communities,
+                community_reports=self.community_reports,
+                community_level=self.COMMUNITY_LEVEL,
+                dynamic_community_selection=False,
+                response_type=self.RESPONSE_TYPE,
+                query=question,
+            )
+        elif method == "local":
+            coroutine = api.local_search(
+                config=self.config,
+                entities=self.entities,
+                communities=self.communities,
+                community_reports=self.community_reports,
+                text_units=self.text_units,
+                relationships=self.relationships,
+                covariates=None,
+                community_level=self.COMMUNITY_LEVEL,
+                response_type=self.RESPONSE_TYPE,
+                query=question,
+            )
+        else:
+            raise ValueError(f"Unknown search method: {method}")
+
+        future = asyncio.run_coroutine_threadsafe(coroutine, self._loop)
+        response, context = future.result(timeout=180)
+        return str(response), self.describe_context(context)
+
+    @staticmethod
+    def describe_context(context: Any) -> str:
+        """A short markdown summary of what the search read (reports, entities, sources...)."""
+        if not isinstance(context, dict):
+            return ""
+        lines = []
+        for name, table in context.items():
+            if not hasattr(table, "empty") or table.empty:
+                continue
+            title_column = next((c for c in ("title", "entity", "source", "target") if c in table.columns), None)
+            line = f"- **{name.replace('_', ' ').capitalize()}:** {len(table)}"
+            if title_column:
+                sample = [str(v) for v in table[title_column].head(6).tolist()]
+                line += " (" + "; ".join(sample) + ("; …" if len(table) > 6 else "") + ")"
+            lines.append(line)
+        return "\n".join(lines)

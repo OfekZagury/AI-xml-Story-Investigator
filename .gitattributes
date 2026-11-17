@@ -1,0 +1,2 @@
+# The built GraphRAG index is binary data: never convert line endings
+graphrag_index/output/** -text
